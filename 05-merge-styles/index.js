@@ -7,9 +7,6 @@ const bundleCss = path.join(projectDist, 'bundle.css');
 
 async function mergeStyles() {
   try {
-    if (!fs.existsSync(projectDist)) {
-      fs.mkdirSync(projectDist);
-    }
     const files = await fs.promises.readdir(stylesDir, { withFileTypes: true });
     const styles = [];
 
