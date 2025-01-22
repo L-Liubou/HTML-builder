@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
 const projectDist = path.join(__dirname, 'project-dist');
@@ -13,7 +13,7 @@ const componentsDir = path.join(__dirname, 'components');
 
 async function createProjectDist() {
   try {
-    await fs.promises.mkdir(projectDist, { recursive: true });
+    await fs.mkdir(projectDist, { recursive: true });
   } catch (err) {
     console.error('\x1b[91mError creating "project-dist" folder:\x1b[0m', err);
   }
@@ -21,8 +21,8 @@ async function createProjectDist() {
 
 async function replaceTemplateTags() {
   try {
-    let templateContent = await fs.promises.readFile(templateFile, 'utf-8');
-    const componentsFiles = await fs.promises.readdir(componentsDir, {
+    let templateContent = await fs.readFile(templateFile, 'utf-8');
+    const componentsFiles = await fs.readdir(componentsDir, {
       withFileTypes: true,
     });
 
@@ -31,14 +31,14 @@ async function replaceTemplateTags() {
 
       if (file.isFile() && path.extname(file.name) === '.html') {
         const componentName = path.basename(file.name, '.html');
-        const componentContent = await fs.promises.readFile(filePath, 'utf-8');
+        const componentContent = await fs.readFile(filePath, 'utf-8');
         templateContent = templateContent.replace(
           new RegExp(`{{${componentName}}}`, 'g'),
           componentContent,
         );
       }
     }
-    await fs.promises.writeFile(newIndex, templateContent, 'utf-8');
+    await fs.writeFile(newIndex, templateContent, 'utf-8');
   } catch (err) {
     console.error('\x1b[91mError during HTML build process:\x1b[0m', err);
   }
@@ -46,14 +46,16 @@ async function replaceTemplateTags() {
 
 async function copyDir(oldDir, newDir) {
   try {
-    if (!fs.existsSync(oldDir)) {
-      console.error('\x1b[91"Assets" folder is not found\x1b[0m');
-      return;
-    }
-    await fs.promises.rm(newDir, { recursive: true, force: true });
-    await fs.promises.mkdir(newDir, { recursive: true });
+    await fs.access(oldDir);
+  } catch {
+    console.error('\x1b[91"Assets" folder is not found\x1b[0m');
+    return;
+  }
+  try {
+    await fs.rm(newDir, { recursive: true, force: true });
+    await fs.mkdir(newDir, { recursive: true });
 
-    const files = await fs.promises.readdir(oldDir, { withFileTypes: true });
+    const files = await fs.readdir(oldDir, { withFileTypes: true });
     for (const file of files) {
       const oldFilePath = path.join(oldDir, file.name);
       const newFilePath = path.join(newDir, file.name);
@@ -61,7 +63,7 @@ async function copyDir(oldDir, newDir) {
       if (file.isDirectory()) {
         await copyDir(oldFilePath, newFilePath);
       } else {
-        await fs.promises.copyFile(oldFilePath, newFilePath);
+        await fs.copyFile(oldFilePath, newFilePath);
       }
     }
   } catch (err) {
@@ -71,18 +73,18 @@ async function copyDir(oldDir, newDir) {
 
 async function mergeStyles() {
   try {
-    const files = await fs.promises.readdir(stylesDir, { withFileTypes: true });
+    const files = await fs.readdir(stylesDir, { withFileTypes: true });
     const styles = [];
 
     for (const file of files) {
       const filePath = path.join(stylesDir, file.name);
 
       if (file.isFile() && path.extname(file.name) === '.css') {
-        const data = await fs.promises.readFile(filePath, 'utf-8');
+        const data = await fs.readFile(filePath, 'utf-8');
         styles.push(data);
       }
     }
-    await fs.promises.writeFile(bundleCss, styles.join('\n'));
+    await fs.writeFile(bundleCss, styles.join('\n'));
   } catch (err) {
     console.error('\x1b[91mError during merge styles process:\x1b[0m', err);
   }
